@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 # load training dataset
 X_train = np.load("X_train_regression1.npy")
-Y_train = np.load("Y_train_regression1.npy")
+Y_train = np.load("y_train_regression1.npy")
 
 
 
