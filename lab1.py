@@ -7,6 +7,7 @@ from sklearn.linear_model import Lasso, Ridge, LinearRegression, ElasticNet, Squ
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
+
 # # Leave One Take one out
 # def leave_one_out(X, Y, i):
 #     X_train = []
