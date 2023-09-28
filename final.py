@@ -35,10 +35,10 @@ def Linear_ordinary_regression(x_train, y_train, x_test):
     return (y_pred, SSE, y_test)
 
 
-# order - order of the polynomial
+# order -  polynomial order
 # x_train - feature vector
 # y_train - vector of outcomes
-# x_test - feature vector for testing and evaluating the used model
+# x_test - feature vector for testing and evaluating the model to be picked
 def polynomial_regression(order, x_train, y_train, x_test):
     """
     Function that performs polynomial regression.
@@ -273,9 +273,9 @@ print('\nSSE for Lasso regression with lambda =', lambda_lasso, 'is:', lasso_tup
 
 # ------------------------------------------------------------------------------------------------------------------------------------ #
 # At this point we already know which model better minimizes the SSE and better adjusts to the training data.
-# But we cannot guarentee that this model is robust for new data, for example, the polynomial regression may suffer from overfitting.
+# But we cannot guarentee that this model is robust for new data, as the polynomial regression, for instance, may suffer from the issue of overfitting.
 # For this reason, we are going to consider a third set, the validation set.
-# Separate known data into training set and validation set in order to check hyperparameters or overfiting, for example.
+# Separate known data into training and validation set in order to check hyperparameters or overfiting, for example.
 test_size = 0.3
 (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=False) 
 
