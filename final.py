@@ -267,11 +267,6 @@ lasso_tuple = lasso(alpha_lasso, x_train, y_train, x_test)
 print('\nSSE for Lasso regression with Alpha =', alpha_lasso, 'is:', lasso_tuple[1][0])
 
 
-# ------------------------------------------------------------------------------------------------------------------------------------ #
-# At this point we already know which model better minimizes the SSE and better adjusts to the training data.
-# But we cannot guarentee that this model is robust for new data, for example, the polynomial regression may suffer from overfitting.
-# For this reason, we are going to consider a third set, the validation set.
-# Separate known data into training set and validation set in order to check hyperparameters or overfiting, for example.
 test_size = 0.3
 (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=False) 
 
@@ -466,7 +461,7 @@ plt.ylabel('SSE')
 plt.title('Average SSE computed after Cross Validation with different test sizes')
 plt.draw()
 
-# ------------------------------------------- Compare the models with tuned hyperparameters using cross-validation ------------------------------------------- #
+# Compare the models with tuned hyperparameters using cross-validation 
 
 SSE_ord = Kfolds_linear_ordinary_regression(Kfolds, x_train, y_train, 100)
 SSE_ridge = Kfolds_ridge_regression(Kfolds, x_train, y_train, best_alpha_ridge, 100)
@@ -478,7 +473,6 @@ print("Best alpha for Ridge regression:", best_alpha_ridge)
 print("Best alpha for Lasso regression:", best_alpha_lasso)
 
 # Submision - Best model with tuned hyperparameters
-
 
 ridge_tuple = ridge(best_alpha_ridge, x_train, y_train, x_test)
 y_submit = ridge_tuple[2]
