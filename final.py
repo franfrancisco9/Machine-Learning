@@ -295,190 +295,194 @@ SSE = (np.linalg.norm(y_validation - y_lasso_test))**2
 print("\nSSE for Lasso regression with Alpha =", alpha_lasso, "for the validation set is:", SSE)
 
 
-# Tunning hyperparameters for lasso and ridge which appear above
-# Average SSE comparison with cross-validation using different values of alpha for Ridge regression and Lasso regression 
+# # Tunning hyperparameters for lasso and ridge which appear above
+# # Average SSE comparison with cross-validation using different values of alpha for Ridge regression and Lasso regression 
 
-# Validation for different test sizes and different Alphas:
-alpha_ridge = np.arange(0.01, 2, 0.01) # alpha array to tune for ridge
-alpha_lasso = np.arange(0.01, 2, 0.01) # alpha array to tune for lasso
-test_size_vector = np.arange(0.065, 0.35, 0.01)
-SSE_split_ridge = np.zeros(len(alpha_ridge))
-SSE_split_lasso = np.zeros(len(alpha_lasso))
-SSE_temp = 0
-print("\nValidation for different test sizes and different Alphas:")
-for i in range(len(alpha_ridge)):
-  for test_size in test_size_vector:
+# # Validation for different test sizes and different Alphas:
+# alpha_ridge = np.arange(0.01, 2, 0.01) # alpha array to tune for ridge
+# alpha_lasso = np.arange(0.01, 2, 0.01) # alpha array to tune for lasso
+# test_size_vector = np.arange(0.065, 0.35, 0.01)
+# SSE_split_ridge = np.zeros(len(alpha_ridge))
+# SSE_split_lasso = np.zeros(len(alpha_lasso))
+# SSE_temp = 0
+# print("\nValidation for different test sizes and different Alphas for Ridge")
+# for i in range(len(alpha_ridge)):
+#   for test_size in test_size_vector:
 
-      # Split Training set into new Training data and a Validation set
-      (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=True, random_state=42) 
+#       # Split Training set into new Training data and a Validation set
+#       (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=True, random_state=42) 
 
-      ridge_tuple = ridge(alpha_ridge[i], x_train_new, y_train_new, x_validation)
-      # Calculate SSE with the validation set
-      y_ridge_test = ridge_tuple[2]
-      SSE_split_ridge[i] += (np.linalg.norm(y_validation - y_ridge_test))**2
+#       ridge_tuple = ridge(alpha_ridge[i], x_train_new, y_train_new, x_validation)
+#       # Calculate SSE with the validation set
+#       y_ridge_test = ridge_tuple[2]
+#       SSE_split_ridge[i] += (np.linalg.norm(y_validation - y_ridge_test))**2
 
-  SSE_split_ridge[i] = SSE_split_ridge[i]/len(test_size_vector)
+#   SSE_split_ridge[i] = SSE_split_ridge[i]/len(test_size_vector)
 
-print("\nValidation for different test sizes and different Alphas:")
-for i in range(len(alpha_lasso)):
-  for test_size in test_size_vector:
+# print("\nValidation for different test sizes and different Alphas for Lasso")
+# for i in range(len(alpha_lasso)):
+#   for test_size in test_size_vector:
 
-      # Split Training set into new Training data and a Validation set
-      (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=True, random_state=42) 
+#       # Split Training set into new Training data and a Validation set
+#       (x_train_new, x_validation, y_train_new, y_validation) = train_test_split(x_train, y_train, test_size=test_size, shuffle=True, random_state=42) 
 
-      lasso_tuple = lasso(alpha_lasso[i], x_train_new, y_train_new, x_validation)
-      # Calculate SSE with the validation set
-      y_lasso_test = lasso_tuple[2]
-      SSE_split_lasso[i] += (np.linalg.norm(y_validation - y_lasso_test))**2
-  SSE_split_lasso[i] = SSE_split_lasso[i]/len(test_size_vector)
+#       lasso_tuple = lasso(alpha_lasso[i], x_train_new, y_train_new, x_validation)
+#       # Calculate SSE with the validation set
+#       y_lasso_test = lasso_tuple[2]
+#       SSE_split_lasso[i] += (np.linalg.norm(y_validation - y_lasso_test))**2
+#   SSE_split_lasso[i] = SSE_split_lasso[i]/len(test_size_vector)
 
-# Validation using Cross-Validations with K = Kfolds 
-print("\nCross-Validation with K = Kfolds")
-for Kfolds in range(3, 16, 1):
-    SSE_validation_ridge = np.zeros(len(alpha_ridge))
-    SSE_validation_lasso = np.zeros(len(alpha_lasso))
-    SSE_min = 1000
-    SSE_temp = 0
+# # Validation using Cross-Validations with K = Kfolds 
+# print("\nCross-Validation with K = Kfolds")
+# for Kfolds in range(3, 16, 1):
+#     print("Kfolds:", Kfolds)
+#     SSE_validation_ridge = np.zeros(len(alpha_ridge))
+#     SSE_validation_lasso = np.zeros(len(alpha_lasso))
+#     SSE_min = 1000
+#     SSE_temp = 0
 
-    kf = KFold(n_splits=Kfolds, random_state=None, shuffle=False)
-    for i in range(len(alpha_ridge)):
-        for train_new_index, test_validation_index in kf.split(x_train):
+#     kf = KFold(n_splits=Kfolds, random_state=None, shuffle=False)
+#     for i in range(len(alpha_ridge)):
+#         for train_new_index, test_validation_index in kf.split(x_train):
 
-            x_train_new, x_validation = x_train[train_new_index], x_train[test_validation_index]
-            y_train_new, y_validation = y_train[train_new_index], y_train[test_validation_index]
+#             x_train_new, x_validation = x_train[train_new_index], x_train[test_validation_index]
+#             y_train_new, y_validation = y_train[train_new_index], y_train[test_validation_index]
 
-            ridge_tuple = ridge(alpha_ridge[i], x_train_new, y_train_new, x_validation)
+#             ridge_tuple = ridge(alpha_ridge[i], x_train_new, y_train_new, x_validation)
 
-            # Calculate SSE with the validation set
-            y_ridge_test = ridge_tuple[2]
-            for k in range(y_validation.shape[0]):
-                SSE_temp += (y_validation[k] - y_ridge_test[k][0])**2
+#             # Calculate SSE with the validation set
+#             y_ridge_test = ridge_tuple[2]
+#             for k in range(y_validation.shape[0]):
+#                 SSE_temp += (y_validation[k] - y_ridge_test[k][0])**2
 
-        SSE_validation_ridge[i] = SSE_temp/Kfolds
-        SSE_temp = 0
+#         SSE_validation_ridge[i] = SSE_temp/Kfolds
+#         SSE_temp = 0
 
-        if(SSE_validation_ridge[i] < SSE_min):
-            best_alpha_ridge = alpha_ridge[i]
-            SSE_min = SSE_validation_ridge[i]
+#         if(SSE_validation_ridge[i] < SSE_min):
+#             best_alpha_ridge = alpha_ridge[i]
+#             SSE_min = SSE_validation_ridge[i]
 
-    SSE_min = 1000
-    for i in range(len(alpha_lasso)):
-        for train_new_index, test_validation_index in kf.split(x_train):
+#     SSE_min = 1000
+#     for i in range(len(alpha_lasso)):
+#         for train_new_index, test_validation_index in kf.split(x_train):
 
-            x_train_new, x_validation = x_train[train_new_index], x_train[test_validation_index]
-            y_train_new, y_validation = y_train[train_new_index], y_train[test_validation_index]
+#             x_train_new, x_validation = x_train[train_new_index], x_train[test_validation_index]
+#             y_train_new, y_validation = y_train[train_new_index], y_train[test_validation_index]
 
-            lasso_tuple = lasso(alpha_lasso[i], x_train_new, y_train_new, x_validation)
+#             lasso_tuple = lasso(alpha_lasso[i], x_train_new, y_train_new, x_validation)
 
-            # Calculate SSE with the validation set
-            y_lasso_test = lasso_tuple[2]
-            for k in range(y_validation.shape[0]):
-                SSE_temp += (y_validation[k] - y_lasso_test[k])**2
+#             # Calculate SSE with the validation set
+#             y_lasso_test = lasso_tuple[2]
+#             for k in range(y_validation.shape[0]):
+#                 SSE_temp += (y_validation[k] - y_lasso_test[k])**2
         
-        SSE_validation_lasso[i] = SSE_temp/Kfolds
-        SSE_temp = 0
+#         SSE_validation_lasso[i] = SSE_temp/Kfolds
+#         SSE_temp = 0
 
-        if(SSE_validation_lasso[i] < SSE_min):
-            best_alpha_lasso = alpha_lasso[i]
-            SSE_min = SSE_validation_lasso[i]
+#         if(SSE_validation_lasso[i] < SSE_min):
+#             best_alpha_lasso = alpha_lasso[i]
+#             SSE_min = SSE_validation_lasso[i]
 
-    # Cross-validation for different values of alpha and random shuffling of data 
-    SSE_cv_shuffle_ridge = np.zeros(len(alpha_ridge))
-    SSE_cv_shuffle_lasso = np.zeros(len(alpha_lasso))
+#     # Cross-validation for different values of alpha and random shuffling of data 
+#     SSE_rand_shuffle_ridge = np.zeros(len(alpha_ridge))
+#     SSE_rand_shuffle_lasso = np.zeros(len(alpha_lasso))
 
-    for i in range(len(alpha_ridge)):
-    SSE_cv_shuffle_ridge[i]  = Kfolds_ridge_regression(Kfolds, x_train, y_train, best_alpha_ridge, 100)
+#     for i in range(len(alpha_ridge)):
+#         SSE_rand_shuffle_ridge[i]  = Kfolds_ridge_regression(Kfolds, x_train, y_train, best_alpha_ridge, 100)
 
-    for i in range(len(alpha_lasso)):
-    SSE_cv_shuffle_lasso[i]  = Kfolds_lasso_regression(Kfolds, x_train, y_train, best_alpha_lasso, 100)
+#     for i in range(len(alpha_lasso)):
+#         SSE_rand_shuffle_lasso[i]  = Kfolds_lasso_regression(Kfolds, x_train, y_train, best_alpha_lasso, 100)
 
-    # Plot results
+#     # Plot results
 
-    plot_ridge = plt.figure(1)
-    plt.plot(alpha_ridge, SSE_validation_ridge)
+#     plot_ridge = plt.figure(1)
+#     plt.plot(alpha_ridge, SSE_validation_ridge)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Ridge]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Ridge]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
+#     plt.draw()
 
-    plot_lasso = plt.figure(2)
-    plt.plot(alpha_lasso, SSE_validation_lasso)
+#     plot_lasso = plt.figure(2)
+#     plt.plot(alpha_lasso, SSE_validation_lasso)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Lasso]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Lasso]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
+#     plt.draw()
 
-    # Compare in same plot
+#     # Compare in same plot
 
-    plot_ridge = plt.figure(7)
-    plt.plot(alpha_ridge, SSE_validation_ridge)
+#     plot_ridge = plt.figure(7)
+#     plt.plot(alpha_ridge, SSE_validation_ridge)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha')
-    plt.ylabel('SSE')
-    plt.title('Ridge vs Lasso SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha')
+#     plt.ylabel('SSE')
+#     plt.title('Ridge vs Lasso SSE computed after Cross Validation with K = {} folds'.format(Kfolds))
+#     plt.draw()
 
-    plot_lasso = plt.figure(7)
-    plt.plot(alpha_lasso, SSE_validation_lasso)
-    plt.draw()
+#     plot_lasso = plt.figure(7)
+#     plt.plot(alpha_lasso, SSE_validation_lasso)
+#     plt.draw()
 
-    plot_lasso = plt.figure(3)
-    plt.plot(alpha_ridge, SSE_cv_shuffle_ridge)
+#     plot_lasso = plt.figure(3)
+#     plt.plot(alpha_ridge, SSE_rand_shuffle_ridge)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Ridge]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with shuffling for K = {} folds'.format(Kfolds))
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Ridge]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with shuffling for K = {} folds'.format(Kfolds))
+#     plt.draw()
 
-    plot_lasso = plt.figure(4)
-    plt.plot(alpha_lasso, SSE_cv_shuffle_lasso)
+#     plot_lasso = plt.figure(4)
+#     plt.plot(alpha_lasso, SSE_rand_shuffle_lasso)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Lasso]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with shuffling for K = {} folds'.format(Kfolds))
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Lasso]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with shuffling for K = {} folds'.format(Kfolds))
+#     plt.draw()
 
-    plot_lasso = plt.figure(5)
-    plt.plot(alpha_ridge, SSE_split_ridge)
+#     plot_lasso = plt.figure(5)
+#     plt.plot(alpha_ridge, SSE_split_ridge)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Ridge]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with different test sizes')
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Ridge]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with different test sizes')
+#     plt.draw()
 
-    plot_lasso = plt.figure(6)
-    plt.plot(alpha_lasso, SSE_split_lasso)
+#     plot_lasso = plt.figure(6)
+#     plt.plot(alpha_lasso, SSE_split_lasso)
 
-    # Plot axes labels and show the plot
-    plt.xlabel('Alpha [Lasso]')
-    plt.ylabel('SSE')
-    plt.title('Average SSE computed after Cross Validation with different test sizes')
-    plt.draw()
+#     # Plot axes labels and show the plot
+#     plt.xlabel('Alpha [Lasso]')
+#     plt.ylabel('SSE')
+#     plt.title('Average SSE computed after Cross Validation with different test sizes')
+#     plt.draw()
 
     # Compare the models with tuned hyperparameters using cross-validation 
+    # best values obtained with tuning above
+Kfolds = 15
+best_alpha_lasso = 0.09
+best_alpha_ridge = 1.99
+SSE_ord = Kfolds_linear_ordinary_regression(Kfolds, x_train, y_train, 100)
+SSE_ridge = Kfolds_ridge_regression(Kfolds, x_train, y_train, best_alpha_ridge, 100)
+SSE_lasso = Kfolds_lasso_regression(Kfolds, x_train, y_train, best_alpha_lasso, 100)
 
-    SSE_ord = Kfolds_linear_ordinary_regression(Kfolds, x_train, y_train, 100)
-    SSE_ridge = Kfolds_ridge_regression(Kfolds, x_train, y_train, best_alpha_ridge, 100)
-    SSE_lasso = Kfolds_lasso_regression(Kfolds, x_train, y_train, best_alpha_lasso, 100)
+print('SSE ordinary:', SSE_ord, '\nSSE Ridge:', SSE_ridge, '\nSSE Lasso:', SSE_lasso)
 
-    print('SSE ordinary:', SSE_ord, '\nSSE Ridge:', SSE_ridge, '\nSSE Lasso:', SSE_lasso)
+print("Best alpha for Ridge regression:", best_alpha_ridge)
+print("Best alpha for Lasso regression:", best_alpha_lasso)
 
-    print("Best alpha for Ridge regression:", best_alpha_ridge)
-    print("Best alpha for Lasso regression:", best_alpha_lasso)
+# Submision - Best model with tuned hyperparameters
 
-    # Submision - Best model with tuned hyperparameters
+lasso_tuple = lasso(best_alpha_ridge, x_train, y_train, x_test)
+y_submit = lasso_tuple[2]
 
-    ridge_tuple = ridge(best_alpha_ridge, x_train, y_train, x_test)
-    y_submit = ridge_tuple[2]
-
-    np.save('output', y_submit)
+np.save('output', y_submit)
 
     # plt.show()
