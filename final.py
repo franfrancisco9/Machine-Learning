@@ -480,9 +480,14 @@ print("Best alpha for Lasso regression:", best_alpha_lasso)
 
 # Submision - Best model with tuned hyperparameters
 
+output = np.load('output.npy')
+print(output)
+
 lasso_tuple = lasso(best_alpha_lasso, x_train, y_train, x_test)
 y_submit = lasso_tuple[2]
+print(y_submit)
 
-np.save('output', y_submit)
+# print(y_submit == output)
+np.save('output_correct', y_submit)
 
     # plt.show()
