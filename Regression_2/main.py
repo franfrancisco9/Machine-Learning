@@ -1,5 +1,6 @@
 # Import libraries
 import numpy as np
+from tqdm import tqdm
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 
 def compute_SSE(Y_train, model_1, model_2):
@@ -94,7 +95,7 @@ np.save("predictions.npy", predictions_residual)
 
 
 #================================================================================================
-# EM ALGORITHM
+# EM ALGORITHM already with best parameters obtained from tuning at the end
 #================================================================================================
 # Initialization for EM
 n_samples = X_train.shape[0]
@@ -133,7 +134,7 @@ np.save("predictions_em.npy", predictions_em)
 #================================================================================================
 # TUNING PART
 #================================================================================================
-def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-5, max_iterations=1000):
+def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-2, max_iterations=100):
     """
     Function to train using EM.
     Input:
@@ -158,7 +159,7 @@ def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-5, m
         model_2 = model_class(alpha=alpha).fit(X_train[assignments == 1], Y_train[assignments == 1])
 
     prev_likelihood_sum = float('-inf')
-    for iteration in range(max_iterations):
+    for _ in range(max_iterations):
         residuals_1 = Y_train.reshape(-1) - model_1.predict(X_train)
         residuals_2 = Y_train.reshape(-1) - model_2.predict(X_train)
 
@@ -166,9 +167,10 @@ def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-5, m
         likelihood_2 = np.exp(-0.5 * residuals_2**2)
 
         current_likelihood_sum = np.sum(likelihood_1 + likelihood_2)
-
+        
         # Check convergence
         if abs(current_likelihood_sum - prev_likelihood_sum) < change_threshold:
+            # print("Converged")
             break
 
         prev_likelihood_sum = current_likelihood_sum
@@ -216,6 +218,9 @@ def train_with_residuals(X_train, Y_train, model_class, alpha):
         
     return model_1, model_2
 
+print("=====================================")
+print("Tuning...")
+print("=====================================")
 # Initialize best SSE and best parameters
 best_SSE = float('inf')
 best_params = None
@@ -226,35 +231,34 @@ best_method = None
 model_classes = [LinearRegression, Ridge, Lasso]
 
 # Define alpha values to explore
-alphas = np.arange(0.005, 2.005, 0.005)
+alphas = np.arange(0.01, 1.01, 0.01)
 
-# Define max iteration values to explore
-max_iterations_values = [10, 50, 100, 200]
-
-for model_class in model_classes:
-    for alpha in alphas:
-        for max_iterations in max_iterations_values:
+# to test several rand choices loop 10 times
+for _ in tqdm(range(10), desc="Rand Choices", total=10):
+    for model_class in tqdm(model_classes, desc="Model Classes", leave=False):
+        for alpha in tqdm(alphas, desc="Alphas", leave=False):
             # Train using EM
-            model_1_em, model_2_em = train_with_EM(X_train, Y_train, model_class, alpha, max_iterations)
+            model_1_em, model_2_em = train_with_EM(X_train, Y_train, model_class, alpha)
             SSE_em, _, _ = compute_SSE(Y_train, model_1_em, model_2_em)
             
             if SSE_em < best_SSE:
                 best_SSE = SSE_em
-                best_params = (model_class, alpha, max_iterations)
+                best_params = (model_class, alpha)
                 best_models = (model_1_em, model_2_em)
                 best_method = "EM"
-                print(f"New Best SSE with EM: {best_SSE}, Model: {model_class.__name__}, Alpha: {alpha}, Max Iterations: {max_iterations}")
+                tqdm.write(f"New Best SSE with EM: {best_SSE}, Model: {model_class.__name__}, Alpha: {alpha}")
 
-            # Train using residual splitting (no change needed here since it's not iterative)
-            model_1_res, model_2_res = train_with_residuals(X_train, Y_train, model_class, alpha)
-            SSE_res, _, _ = compute_SSE(Y_train, model_1_res, model_2_res)
-            
-            if SSE_res < best_SSE:
-                best_SSE = SSE_res
-                best_params = (model_class, alpha)
-                best_models = (model_1_res, model_2_res)
-                best_method = "Residual Splitting"
-                print(f"New Best SSE with Residual Splitting: {best_SSE}, Model: {model_class.__name__}, Alpha: {alpha}")
+                # Train using residual splitting commented since EM is better after testing
+                # model_1_res, model_2_res = train_with_residuals(X_train, Y_train, model_class, alpha)
+                # SSE_res, _, _ = compute_SSE(Y_train, model_1_res, model_2_res)
+                
+                # if SSE_res < best_SSE:
+                #     best_SSE = SSE_res
+                #     best_params = (model_class, alpha)
+                #     best_models = (model_1_res, model_2_res)
+                #     best_method = "Residual Splitting"
+                #     tqdm.write(f"New Best SSE with Residual Splitting: {best_SSE}, Model: {model_class.__name__}, Alpha: {alpha}")
+
 
 # Predict with the best model
 best_model_1, best_model_2 = best_models
