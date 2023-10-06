@@ -134,7 +134,7 @@ np.save("predictions_em.npy", predictions_em)
 #================================================================================================
 # TUNING PART
 #================================================================================================
-def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-2, max_iterations=100):
+def train_with_EM(X_train, Y_train, model_class, alpha, change_threshold=1e-8, max_iterations=1000):
     """
     Function to train using EM.
     Input:
@@ -227,14 +227,15 @@ best_params = None
 best_models = None
 best_method = None
 
-# Define model classes to explore
-model_classes = [LinearRegression, Ridge, Lasso]
+# Define model classes to explore commented after recognizing that Lasso is the best
+# model_classes = [LinearRegression, Ridge, Lasso]
+model_classes = [Lasso]
 
-# Define alpha values to explore
-alphas = np.arange(0.01, 1.01, 0.01)
+# Define alpha values to explore adjusted after recognizing that below 0.2 is the best
+alphas = np.arange(0.01, 0.51, 0.01)
 
-# to test several rand choices loop 10 times
-for _ in tqdm(range(10), desc="Rand Choices", total=10):
+# to test several rand choices loop 500 times
+for _ in tqdm(range(500), desc="Rand Choices", total=10):
     for model_class in tqdm(model_classes, desc="Model Classes", leave=False):
         for alpha in tqdm(alphas, desc="Alphas", leave=False):
             # Train using EM
