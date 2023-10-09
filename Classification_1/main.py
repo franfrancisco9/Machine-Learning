@@ -3,6 +3,7 @@
 # MLP
 # CNN
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+from sklearn.model_selection import train_test_split
 import numpy as np
 
 # Load the data
@@ -61,8 +62,9 @@ print("Balanced Accuracy Score: ", balanced_accuracy_score(Y_train, Y_pred))
 print(X_train[0])
 # CNN Classifier with BAS evaluation at the end
 from keras.models import Sequential
-from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D
+from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout
 from keras.utils import to_categorical
+from keras.preprocessing.image import ImageDataGenerator
 print("CNN Classifier")
 # create model
 model = Sequential()
@@ -91,12 +93,67 @@ model.add(Dense(2, activation='softmax'))
 
 # Using categorical crossentropy with one-hot encoded labels
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-model.fit(X_reconstructed, Y_train_onehot, validation_split=0.2, epochs=3)
+model.fit(X_reconstructed, Y_train_onehot, validation_split=0.2, epochs=10)
 
 # Predict on training set
 Y_pred = model.predict(X_reconstructed)
 # Convert predictions to labels
 Y_pred_labels = np.argmax(Y_pred, axis=1)	
+# print the confusion matrix
+print("Confusion Matrix: ")
+print(confusion_matrix(Y_train, Y_pred_labels))
+# print the balanced accuracy score
+print("Balanced Accuracy Score: ", balanced_accuracy_score(Y_train, Y_pred_labels))
+
+
+print("CNN Classifier number 2")
+# Split the data into training and validation sets
+X_train_reconstructed, X_val_reconstructed, Y_train_onehot, Y_val_onehot = train_test_split(X_reconstructed, Y_train_onehot, test_size=0.2, stratify=Y_train_onehot)
+
+# Data Augmentation
+datagen_train = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+datagen_train.fit(X_train_reconstructed)
+
+# You can use the same ImageDataGenerator for the validation data, 
+# or create a new one without augmentation.
+datagen_val = ImageDataGenerator()  # no augmentation for validation data
+
+train_gen = datagen_train.flow(X_train_reconstructed, Y_train_onehot, batch_size=32)
+val_gen = datagen_val.flow(X_val_reconstructed, Y_val_onehot, batch_size=32)
+
+
+# CNN Model
+model = Sequential()
+model.add(Conv2D(64, kernel_size=3, activation='relu', input_shape=(28,28,3)))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Conv2D(32, kernel_size=3, activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+
+# Compiling the model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Fit the model using the data generators
+model.fit(train_gen, validation_data=val_gen, epochs=3)
+
+# Predict on training set
+Y_pred = model.predict(X_reconstructed)
+# Convert predictions to labels
+Y_pred_labels = np.argmax(Y_pred, axis=1)
+
 # print the confusion matrix
 print("Confusion Matrix: ")
 print(confusion_matrix(Y_train, Y_pred_labels))
