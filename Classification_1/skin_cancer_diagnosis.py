@@ -19,7 +19,7 @@ def k_means_clustering(Imsmooth, K):
     
     return labels, centroids
 
-# Step 3: Feature Extraction
+#  Step 3: Feature Extraction
 def feature_extraction(labels, ground_labels):
     # Implement your feature extraction methods here (e.g., color features, GLCM, LBP)
     # You can use libraries like scikit-image for feature extraction
