@@ -141,7 +141,7 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
-model.add(Dense(2, activation='softmax'))
+model.add(Dense(2, activation='relu'))
 
 # Compiling the model
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])

@@ -1,48 +1,49 @@
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import balanced_accuracy_score, confusion_matrix
 from sklearn.svm import SVC
 
-# Step 1: Gaussian Filtering
+# Load the data
+X_train = np.load("Xtrain_Classification1.npy")
+Y_train = np.load("ytrain_Classification1.npy")
+X_test = np.load("Xtest_Classification1.npy")
+X_reconstructed = np.load("Xtrain_Classification1_reconstructed.npy")
+
 def gaussian_filtering(img, kernel_size):
     Imsmooth = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
     return Imsmooth
 
-# Step 2: K-Means Clustering
-def k_means_clustering(Imsmooth, K):
-    pixel_values = Imsmooth.reshape((-1, 3))
-    
-    kmeans = KMeans(n_clusters=K, random_state=0).fit(pixel_values)
+def k_means_clustering(images_list, K):
+    all_pixels = np.vstack(images_list).reshape(-1, 3)
+    kmeans = KMeans(n_clusters=K, random_state=0, n_init="auto").fit(all_pixels)
     labels = kmeans.labels_
+    reshaped_labels = np.array(np.split(labels, len(images_list)))
     centroids = kmeans.cluster_centers_
-    
-    return labels, centroids
+    return reshaped_labels, centroids
 
-#  Step 3: Feature Extraction
-def feature_extraction(labels, ground_labels):
-    # Implement your feature extraction methods here (e.g., color features, GLCM, LBP)
-    # You can use libraries like scikit-image for feature extraction
-    
-    # Example: calculate accuracy for illustration purposes
-    accuracy = accuracy_score(ground_labels, labels)
-    return accuracy
+def get_cluster_proportions(labels, K):
+    proportions = []
+    for label in labels:
+        proportion = np.bincount(label, minlength=K) / float(label.size)
+        proportions.append(proportion)
+    return np.array(proportions)
 
-# Step 4: Classification
-def classification(features, ground_labels):
-    # Example: use a Support Vector Machine (SVM) for classification
-    model = SVC(kernel='linear')
-    model.fit(features, ground_labels)
-    predicted_labels = model.predict(features)
-    accuracy = accuracy_score(ground_labels, predicted_labels)
-    confusion = confusion_matrix(ground_labels, predicted_labels)
-    
-    return predicted_labels, accuracy, confusion
+def feature_extraction(image):
+    lbp_features = extract_lbp(image[:,:,0])  # Using only one channel for simplicity
+    # glcm_features = extract_glcm(image[:,:,0])  # Using only one channel for simplicity
+    return np.hstack([lbp_features])
+from skimage.feature import local_binary_pattern
+def extract_lbp(image, P=8, R=1):
+    lbp = local_binary_pattern(image, P=P, R=R, method='uniform')
+    (hist, _) = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), range=(0, P + 2))
+    hist = hist.astype("float")
+    hist /= (hist.sum() + 1e-6)  # normalize
+    return hist
 
-# Load your RGB images and ground truth labels
-# Replace 'images' and 'ground_labels' with your data
-images = ...
-ground_labels = ...
+
+images = X_reconstructed
+ground_labels = Y_train
 
 # Hyperparameters
 kernel_size = 5
@@ -54,12 +55,14 @@ smoothed_images = [gaussian_filtering(img, kernel_size) for img in images]
 # Step 2: K-Means Clustering
 labels, centroids = k_means_clustering(smoothed_images, K)
 
-# Step 3: Feature Extraction
-accuracy = feature_extraction(labels, ground_labels)
+# Extract features from all images
+image_features = np.array([feature_extraction(img) for img in smoothed_images])
 
-# Step 4: Classification
-predicted_labels, classification_accuracy, confusion_matrix = classification(centroids, ground_labels)
+# Train the classifier
+model = SVC(kernel='linear', class_weight='balanced')
+model.fit(image_features, ground_labels)
+predicted_labels = model.predict(image_features)
+classification_accuracy = balanced_accuracy_score(ground_labels, predicted_labels)
 
-print("Accuracy after feature extraction:", accuracy)
 print("Classification Accuracy:", classification_accuracy)
-print("Confusion Matrix:\n", confusion_matrix)
+print("Confusion Matrix:\n", confusion_matrix(ground_labels, predicted_labels))
