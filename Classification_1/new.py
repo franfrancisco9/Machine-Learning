@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import matplotlib.pyplot as plt
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, Activation, Add, Dropout
 from keras.optimizers import Adam
@@ -10,6 +12,30 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
 import keras.backend as K
 from itertools import product
+
+def plot_metrics(history, batch_size, patience):
+    # Plot accuracy
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model Accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+
+    # Plot loss
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+
+    plt.tight_layout()
+    plt.savefig(f"cnn_images/accuracy_loss_b_{batch_size}_p_{patience}.png")
+    plt.close()
 
 class WeightedCategoricalCrossentropy(Loss):
     def __init__(self, weights, **kwargs):
@@ -123,14 +149,14 @@ def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience
     checkpoint_filepath = 'best_weights.h5'
     checkpoint = ModelCheckpoint(filepath=checkpoint_filepath, monitor='val_loss', save_best_only=True, mode='min')
 
-    model.fit(datagen.flow(x_train, to_categorical(y_train), batch_size=batch_size), epochs=1000,
+    history = model.fit(datagen.flow(x_train, to_categorical(y_train), batch_size=batch_size), epochs=1000,
               validation_data=(x_test, to_categorical(y_test)), callbacks=[checkpoint, early_stopping])
     model.load_weights(checkpoint_filepath)
 
     y_pred = model.predict(x_test)
     y_pred_classes = np.argmax(y_pred, axis=1)
 
-    return balanced_accuracy_score(y_test, y_pred_classes), model
+    return balanced_accuracy_score(y_test, y_pred_classes), model, history
 
 def main():
     x_train, x_test, y_train, y_test, x_test_final = load_and_preprocess_data()
@@ -142,10 +168,13 @@ def main():
             print("=====================================\n")
             print("Batch size: {}, Patience: {}".format(batch_size, patience))
             print("\n=====================================")
-            bal_acc, model = build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience)
+            bal_acc, model, history  = build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience)
             print("=====================================\n")
             print("Batch size: {}, Patience: {}, Balanced accuracy: {}".format(batch_size, patience, bal_acc))
-            print("\n=====================================\n")
+            print("\n=====================================\n")    
+            # Call the plot function
+            plot_metrics(history, batch_size, patience)
+
             if bal_acc > best_bal_acc:
                 best_bal_acc = bal_acc
                 best_model = model
