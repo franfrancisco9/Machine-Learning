@@ -1,4 +1,5 @@
 import numpy as np
+import keras
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -21,15 +22,32 @@ x_train, x_test, y_train, y_test = train_test_split(x_train_full, y_train_full, 
 x_train = x_train.reshape(-1, 28, 28, 3).astype('float32') / 255.0
 x_test = x_test.reshape(-1, 28, 28, 3).astype('float32') / 255.0
 x_test_final = x_test_final.reshape(-1, 28, 28, 3).astype('float32') / 255.0
-# Augment the melanoma class
-datagen = ImageDataGenerator(
-    rotation_range=20, width_shift_range=0.2, height_shift_range=0.2, shear_range=0.2,
-    zoom_range=0.2, horizontal_flip=True, fill_mode='nearest'
-)
+# Separate the melanoma and non-melanoma samples
 x_melanoma = x_train[y_train == 1]
-augmented_data = [data for data, _ in datagen.flow(x_melanoma, batch_size=len(x_melanoma) * 5)]
-x_augmented = np.vstack(augmented_data)
-y_augmented = np.ones(len(x_augmented))
+y_melanoma = y_train[y_train == 1]
+
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest')
+
+# Fit the data generator
+datagen.fit(x_melanoma)
+
+# Augment the melanoma class
+augmented_data = []
+batch_size = 32
+for x_batch, y_batch in datagen.flow(x_melanoma, y_melanoma, batch_size=batch_size):
+    augmented_data.append((x_batch, y_batch))
+    if len(augmented_data) * batch_size > len(x_melanoma) * 5:  # augmenting to have 5 times more samples than original
+        break
+
+x_augmented = np.vstack([data[0] for data in augmented_data])
+y_augmented = np.hstack([data[1] for data in augmented_data])
 
 x_train = np.vstack([x_train, x_augmented])
 y_train = np.hstack([y_train, y_augmented])
