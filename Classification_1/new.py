@@ -67,11 +67,10 @@ class BalAccScore(keras.callbacks.Callback):
 def plot_metrics(history, batch_size, patience, cm):
     # Plot accuracy
     plt.figure(figsize=(10, 4))
-    plt.title('Model accuracy for batch size {} and patience {}'.format(batch_size, patience))
     plt.subplot(1, 2, 1)
     plt.plot(history.history['balanced_accuracy'])
     plt.plot(history.history['val_balanced_accuracy'])
-    plt.title('Model balanced_accuracy')
+    plt.title('Model accuracy for batch size {} and patience {}'.format(batch_size, patience))
     plt.ylabel('balanced_accuracy')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
@@ -80,7 +79,7 @@ def plot_metrics(history, batch_size, patience, cm):
     plt.subplot(1, 2, 2)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
-    plt.title('Model Loss')
+    plt.title('Model Loss for batch size {} and patience {}'.format(batch_size, patience))
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
@@ -102,7 +101,6 @@ def plot_metrics(history, batch_size, patience, cm):
     plt.ylabel("True labels")
     plt.xticks([], [])
     plt.yticks([], [])
-    plt.title('Confusion matrix ')
     plt.colorbar()
     plt.savefig(f"cnn_images/confusion_matrix_b_{batch_size}_p_{patience}.png")
     plt.close()
@@ -228,7 +226,7 @@ def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience
     balAccScore = BalAccScore(validation_data=(x_test, to_categorical(y_test)))
 
     model = Model(inputs=input_img, outputs=output)
-    model.compile(optimizer=Adam(), loss=loss, metrics=[BalancedAccuracy()]) #'binary_crossentropy'
+    model.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=[BalancedAccuracy()]) #'binary_crossentropy'
 
     early_stopping = EarlyStopping(monitor='balanced_accuracy' , patience=patience, restore_best_weights=True)
     checkpoint_filepath = 'best_weights.h5'
@@ -252,7 +250,7 @@ def main():
 
     best_bal_acc = 0
     for batch_size in [32, 64, 128, 256]:
-        for patience in [1, 2, 3, 4, 5, 10, 15, 20, 25]:
+        for patience in [5, 10, 15, 20, 25]:
             print("=====================================\n")
             print("Batch size: {}, Patience: {}".format(batch_size, patience))
             print("\n=====================================")
