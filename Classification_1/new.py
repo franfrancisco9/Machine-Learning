@@ -67,11 +67,12 @@ class BalAccScore(keras.callbacks.Callback):
 def plot_metrics(history, batch_size, patience, cm):
     # Plot accuracy
     plt.figure(figsize=(10, 4))
+    plt.title('Model accuracy for batch size {} and patience {}'.format(batch_size, patience))
     plt.subplot(1, 2, 1)
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('Model Accuracy')
-    plt.ylabel('Accuracy')
+    plt.plot(history.history['balanced_accuracy'])
+    plt.plot(history.history['val_balanced_accuracy'])
+    plt.title('Model balanced_accuracy')
+    plt.ylabel('balanced_accuracy')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
 
@@ -90,7 +91,13 @@ def plot_metrics(history, batch_size, patience, cm):
 
     # Plot confusion matrix
     plt.figure(figsize=(10, 10))
+    plt.title('Confusion matrix for batch size {} and patience {}'.format(batch_size, patience))
     plt.imshow(cm, cmap=plt.cm.Blues)
+    # add the values inside each square
+    thresh = cm.max() / 2.
+    for i, j in product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], 'd'), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+
     plt.xlabel("Predicted labels")
     plt.ylabel("True labels")
     plt.xticks([], [])
@@ -223,14 +230,11 @@ def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience
     model = Model(inputs=input_img, outputs=output)
     model.compile(optimizer=Adam(), loss=loss, metrics=[BalancedAccuracy()]) #'binary_crossentropy'
 
-    datagen = ImageDataGenerator(rotation_range=10, zoom_range=0.1, width_shift_range=0.1, height_shift_range=0.1)
-    datagen.fit(x_train)
-
-    early_stopping = EarlyStopping(monitor='val_bal_acc' , patience=patience, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='balanced_accuracy' , patience=patience, restore_best_weights=True)
     checkpoint_filepath = 'best_weights.h5'
-    checkpoint = ModelCheckpoint(filepath=checkpoint_filepath, monitor=balAccScore , save_best_only=True, mode='min')
+    checkpoint = ModelCheckpoint(filepath=checkpoint_filepath, monitor='balanced_accuracy' , save_best_only=True, mode='min')
 
-    history = model.fit(datagen.flow(x_train, to_categorical(y_train), batch_size=batch_size), epochs=1000,
+    history = model.fit(x_train, to_categorical(y_train), epochs=1000, batch_size=batch_size,
               validation_data=(x_test, to_categorical(y_test)), callbacks=[checkpoint, early_stopping, balAccScore])
     model.load_weights(checkpoint_filepath)
 
