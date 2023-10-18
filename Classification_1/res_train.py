@@ -72,7 +72,7 @@ checkpoint = ModelCheckpoint('best_weights.h5', monitor='val_loss', save_best_on
 # Training
 model.fit(
     datagen.flow(x_train, y_train_one_hot, batch_size=batch_size),
-    epochs=1000, validation_data=(x_test, to_categorical(y_test)),
+    epochs=20, validation_data=(x_test, to_categorical(y_test)),
     callbacks=[checkpoint, early_stopping]
 )
 
