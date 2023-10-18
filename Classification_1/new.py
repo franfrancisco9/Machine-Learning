@@ -40,7 +40,7 @@ class BalancedAccuracy(tf.keras.metrics.Metric):
         
         return (sensitivity + specificity) / 2.0
 
-    def reset_states(self):
+    def reset_state(self):
         self.tp.assign(0.0)
         self.fp.assign(0.0)
         self.tn.assign(0.0)
