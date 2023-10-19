@@ -90,8 +90,7 @@ class Discriminator(nn.Module):
             DiscriminatorBlock(64, 128),
             DiscriminatorBlock(128, 256),
             DiscriminatorBlock(256, 512, stride=1),
-            nn.Conv2d(512, 1, 4, padding=1),
-            nn.Sigmoid()
+            nn.Conv2d(512, 1, 4, padding=1)
         ]
 
         self.model = nn.Sequential(*model)
@@ -107,7 +106,36 @@ from torchvision.datasets import MNIST
 import numpy as np
 from sklearn.model_selection import train_test_split
 import itertools
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+from tqdm import tqdm
+def oversample_data(x_data, y_data, target_samples):
+    augmented_images = []
+    augmented_labels = []
+    num_samples_needed = target_samples - len(y_data[y_data == 1])
+
+    while num_samples_needed > 0:
+        for x, y in zip(x_data, y_data):
+            if y == 1:  # only augment positive examples
+                # Randomly choose a transformation: flip, rotate slightly, or add noise
+                choice = np.random.choice(['flip', 'rotate', 'noise'])
+                if choice == 'flip':
+                    augmented_images.append(np.fliplr(x))
+                elif choice == 'rotate':
+                    angle = np.random.uniform(-10, 10)  # Random angle between -10 and 10 degrees
+                    augmented_images.append(np.rot90(x, k=int(angle/90))) 
+                elif choice == 'noise':
+                    noise = np.random.normal(0, 0.01, x.shape)
+                    augmented_images.append(x + noise)
+
+                augmented_labels.append(1)
+                num_samples_needed -= 1
+                if num_samples_needed == 0:
+                    break
+
+    x_data_oversampled = np.concatenate([x_data, np.array(augmented_images)])
+    y_data_oversampled = np.concatenate([y_data, np.array(augmented_labels)])
+    
+    return x_data_oversampled, y_data_oversampled
 
 def get_predictions(model, dataloader):
     model.eval()
@@ -122,16 +150,16 @@ def get_predictions(model, dataloader):
     return np.array(predictions).flatten()
 
 def load_and_preprocess_data():
-    x_train_full = np.load("Xtrain_Classification1.npy")
+    x_train_full = np.load("Xtrain_Classification1.npy").reshape(-1, 28, 28 , 3).transpose(0, 3, 1, 2)
     y_train_full = np.load("ytrain_Classification1.npy")
-    x_test_final = np.load("Xtest_Classification1.npy")
+    x_test_final = np.load("Xtest_Classification1.npy").reshape(-1, 28, 28 , 3).transpose(0, 3, 1, 2)
 
     # split data making sure there are 1 labels in the y_test otherwise redo the split
     while True:
         x_train, x_test, y_train, y_test = train_test_split(x_train_full, y_train_full, test_size=0.2, random_state=42)
         if 1 in y_test:
             break
-
+    x_train, y_train = oversample_data(x_train, y_train, len(y_train[y_train == 0]))  # Setting target_samples to the number of negative examples
     # print the number of zeros and 1s in train and in test
     print("Train: ", np.unique(y_train, return_counts=True))
     print("Test: ", np.unique(y_test, return_counts=True))
@@ -141,20 +169,13 @@ def load_and_preprocess_data():
     x_train_bad = x_train[y_train == 0]
     x_train_good = x_train[y_train == 1]
 
-    x_train_bad = x_train_bad.astype(np.float32).reshape(-1, 28, 28 , 3)
-    x_train_good = x_train_good.astype(np.float32).reshape(-1, 28, 28 , 3)
-    x_test_final = x_test_final.astype(np.float32).reshape(-1, 28, 28 , 3)
-    x_train_bad = x_train_bad.astype(np.float32).transpose(0, 3, 1, 2)
-    x_train_good = x_train_good.astype(np.float32).transpose(0, 3, 1, 2)
-    x_test_final = x_test_final.astype(np.float32).transpose(0, 3, 1, 2)
-
     return x_train_bad, x_train_good, x_test, y_test, x_test_final
 
 # Parameters
-batch_size = 128
-epochs = 1000
+batch_size = 512
+epochs = 100
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+print("Using device:", device)
 x_train_bad, x_train_good, x_test, y_test, x_test_final = load_and_preprocess_data()
 # Convert numpy arrays to PyTorch tensors
 # Convert numpy arrays to PyTorch tensors
@@ -175,13 +196,14 @@ D_A = Discriminator(3).to(device)
 D_B = Discriminator(3).to(device)
 
 # Optimizers & Loss
-optimizer_G = optim.Adam(itertools.chain(G_A2B.parameters(), G_B2A.parameters()), lr=0.0002, betas=(0.5, 0.999))
-optimizer_D_A = optim.Adam(D_A.parameters(), lr=0.0002, betas=(0.5, 0.999))
-optimizer_D_B = optim.Adam(D_B.parameters(), lr=0.0002, betas=(0.5, 0.999))
+optimizer_G = optim.Adam(itertools.chain(G_A2B.parameters(), G_B2A.parameters()), lr=0.0005, betas=(0.5, 0.999))
+optimizer_D_A = optim.Adam(D_A.parameters(), lr=0.0005, betas=(0.5, 0.999))
+optimizer_D_B = optim.Adam(D_B.parameters(), lr=0.0005, betas=(0.5, 0.999))
 
 criterion_GAN = nn.MSELoss()
 criterion_cycle = nn.L1Loss()
 
+best_bac = 0.0
 for epoch in range(epochs):
     print(f"Epoch {epoch}/{epochs}")
     for real_A, real_B in zip(train_loader_A, train_loader_B):
@@ -234,8 +256,25 @@ for epoch in range(epochs):
     test_predictions_da = get_predictions(D_A, x_test)  # Use D_A as the classifier
     bac_db = balanced_accuracy_score(y_test, test_predictions_db)
     bac_da = balanced_accuracy_score(y_test, test_predictions_da)
-    print(f"[Epoch {epoch}/{epochs}] Loss G: {loss_G.item():.4f}, Loss D A: {loss_D_A.item():.4f}, BAC_D A: {bac_da:.4f}, Loss D B: {loss_D_B.item():.4f}, BAC_D B: {bac_db:.4f}")
-    
+    # show confusion matrix db and da
+    print("Confusion Matrix D_B")
+    print(confusion_matrix(y_test, test_predictions_db))
+    print("Confusion Matrix D_A")
+    print(confusion_matrix(y_test, test_predictions_da))
+    print(f"G: {loss_G.item():.4f}, Loss D A: {loss_D_A.item():.4f}, BAC_D A: {bac_da:.4f}, Loss D B: {loss_D_B.item():.4f}, BAC_D B: {bac_db:.4f}")
+
+    if bac_db > best_bac:
+        best_bac = bac_db
+        torch.save(D_B.state_dict(), "D_B.pt")
+        print("Saved model")
+    elif bac_da > best_bac:
+        best_bac = bac_da
+        torch.save(D_A.state_dict(), "D_A.pt")
+        print("Saved model")
+
+# load the best model
+D_B.load_state_dict(torch.load("D_B.pt"))
+D_A.load_state_dict(torch.load("D_A.pt"))
 # predict x_test_final with D_B and D_a saving as output_d_b and output_d_a
 output_d_b = get_predictions(D_B, x_test_final)
 output_d_a = get_predictions(D_A, x_test_final)
