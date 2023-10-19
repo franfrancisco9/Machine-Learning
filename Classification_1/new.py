@@ -1,8 +1,8 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, Activation, Add, Dropout
+from keras.models import Model, Sequential
+from keras.layers import Input, Conv2D, MaxPool2D, Flatten, Dense, BatchNormalization, Activation, Add, Dropout
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -163,72 +163,90 @@ def load_and_preprocess_data():
     
     x_train = x_train.reshape(-1, 28, 28, 3) / 255.0
     x_test = x_test.reshape(-1, 28, 28, 3) / 255.0
-    x_test_final = x_test_final.reshape(-1, 28, 28, 3)
+    x_test_final = x_test_final.reshape(-1, 28, 28, 3) / 255.0
 
     return x_train, x_test, y_train, y_test, x_test_final
 
-def augment_data(x_train, y_train):
-    x_melanoma = x_train[y_train == 1]
-    y_melanoma = y_train[y_train == 1]
+def augment_data(x_data, y_data, batch_size, augmentation_factor=7):
+    # Extract melanoma samples
+    x_melanoma = x_data[y_data == 1]
+    y_melanoma = y_data[y_data == 1]
 
-    datagen = ImageDataGenerator(rotation_range=20, width_shift_range=0.2, height_shift_range=0.2,
-                                 shear_range=0.2, zoom_range=0.2, horizontal_flip=True, fill_mode='nearest')
+    # Initialize milder data augmentation generator
+    datagen = ImageDataGenerator(rotation_range=10, 
+                                 width_shift_range=0.1, 
+                                 height_shift_range=0.1,
+                                 shear_range=0.1, 
+                                 zoom_range=0.1, 
+                                 horizontal_flip=True, 
+                                 fill_mode='nearest')
+    
     datagen.fit(x_melanoma)
 
-    augmented_data = []
-    target_samples = 5 * len(x_melanoma)
-    for x_batch, y_batch in datagen.flow(x_melanoma, y_melanoma, batch_size=32):
-        augmented_data.append((x_batch, y_batch))
-        if len(augmented_data) * 32 > target_samples:
+    target_samples = augmentation_factor * len(x_melanoma)
+
+    x_augmented = []
+    y_augmented = []
+    
+    for x_batch, y_batch in datagen.flow(x_melanoma, y_melanoma, batch_size=batch_size):
+        x_augmented.extend(x_batch)
+        y_augmented.extend(y_batch)
+        
+        if len(x_augmented) >= target_samples:
             break
 
-    x_augmented = np.vstack([data[0] for data in augmented_data])
-    y_augmented = np.hstack([data[1] for data in augmented_data])
+    x_augmented = np.array(x_augmented)
+    y_augmented = np.array(y_augmented)
 
-    x_train = np.vstack([x_train, x_augmented])
-    y_train = np.hstack([y_train, y_augmented])
+    x_data = np.vstack([x_data, x_augmented])
+    y_data = np.hstack([y_data, y_augmented])
 
-    return x_train, y_train
+    print("After augmentation: ", np.unique(y_data, return_counts=True))
 
-def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience):
+    return x_data, y_data
+
+def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience, loss_choice=0):
     w_array = np.array([[1., 1.], [6., 1.]])
     loss = WeightedCategoricalCrossentropy(weights=w_array)
    
     input_shape = (28, 28, 3)
     input_img = Input(shape=input_shape)
+    model = Sequential()
 
-    # Initial layers
-    X = Conv2D(32, (3, 3), activation = 'relu')(input_img)
-    X = MaxPooling2D((2, 2))(X)
-    # X = BatchNormalization()(X)
+    # Input layer with 1st convolutional layer
+    model.add(Conv2D(filters=32,
+                    kernel_size=(3, 3),
+                    strides=(1, 1),
+                    activation='relu',
+                    input_shape=(28, 28, 3)))
+    model.add(MaxPool2D(pool_size=(2, 2)))
+    # model.add(BatchNormalization())
 
-    # Identity blocks
-    # X = identity_block(X, [64, 64])
-    # X = identity_block(X, [128, 128])
-    # X = MaxPooling2D((2, 2))(X)
-    X = Dropout(0.2)(X)
+    # 2nd convolutional layer
+    model.add(Conv2D(filters=64,
+                    kernel_size=(3, 3),
+                    strides=(1, 1),
+                    activation='relu'))
+    model.add(MaxPool2D(pool_size=(2, 2)))
+    # model.add(BatchNormalization())
 
-    X = Conv2D(64, (3, 3), activation = 'relu')(X)
-    X = MaxPooling2D((2, 2))(X)
-    X = Dropout(0.2)(X)
+    # Flatten and Fully Connected Layers
+    model.add(Flatten())
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.5))
 
-    X = Conv2D(128, (3, 3), activation = 'relu')(X)
-    X = MaxPooling2D((2, 2))(X)
-    X = Dropout(0.2)(X)
-
-    # Flatten and fully connected layers
-    X = Flatten()(X)
-    X = Dense(256, activation='relu')(X)
-    # X = Dropout(0.5)(X)
-    # X = Dense(128, activation='relu')(X)
-    # X = Dropout(0.5)(X)
-    output = Dense(len(np.unique(y_train)), activation='softmax')(X)
+    # Output layer
+    model.add(Dense(len(np.unique(y_train)), activation='softmax'))
+    model.summary()
     balAccScore = BalAccScore(validation_data=(x_test, to_categorical(y_test)))
 
-    model = Model(inputs=input_img, outputs=output)
-    model.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=[BalancedAccuracy()]) #'binary_crossentropy'
+    if loss_choice == 0:   
+        loss = 'binary_crossentropy'
+    elif loss_choice == 1:
+        loss = loss
+    model.compile(optimizer=Adam(), loss=loss, metrics=[BalancedAccuracy()]) #'binary_crossentropy'
 
-    early_stopping = EarlyStopping(monitor='balanced_accuracy' , patience=patience, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss' , patience=patience, restore_best_weights=True)
     checkpoint_filepath = 'best_weights.h5'
     checkpoint = ModelCheckpoint(filepath=checkpoint_filepath, monitor='balanced_accuracy' , save_best_only=True, mode='min')
 
@@ -246,37 +264,44 @@ def build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience
 
 def main():
     x_train, x_test, y_train, y_test, x_test_final = load_and_preprocess_data()
-    x_train, y_train = augment_data(x_train, y_train)
+    
 
     best_bal_acc = 0
-    for batch_size in [32, 64, 128, 256]:
-        for patience in [5, 10, 15, 20, 25]:
-            print("=====================================\n")
-            print("Batch size: {}, Patience: {}".format(batch_size, patience))
-            print("\n=====================================")
-            bal_acc, model, history, cm  = build_and_train_model(x_train, y_train, x_test, y_test, batch_size, patience)
-            print("=====================================\n")
-            print("Batch size: {}, Patience: {}, Balanced accuracy: {}".format(batch_size, patience, bal_acc))
-            print("\n=====================================\n")    
-            # Call the plot function
-            plot_metrics(history, batch_size, patience, cm)
-
-            if bal_acc > best_bal_acc:
-                best_bal_acc = bal_acc
-                best_model = model
-                best_batch_size = batch_size
-                best_patience = patience
-                # save to output.npy x_test_final and y_pred_classes
+    loss_choice = 0
+    for batch_size in [32, 64, 128, 256, 512]:
+        x_train_aug, y_train_aug = augment_data(x_train, y_train, batch_size)
+        for patience in [10]:
+            for loss_choice in [0,1]:
                 print("=====================================\n")
-                print("saving to output.npy")
-                print("\n=====================================\n")
-                y_pred = best_model.predict(x_test_final)
-                y_pred_classes = np.argmax(y_pred, axis=1)
-                np.save("output.npy", y_pred_classes)
+                print("Batch size: {}, Patience: {}".format(batch_size, patience))
+                print("\n=====================================")
+                bal_acc, model, history, cm  = build_and_train_model(x_train_aug, y_train_aug, x_test, y_test, batch_size, patience, loss_choice=loss_choice)
+                print("=====================================\n")
+                print("Batch size: {}, Patience: {}, Balanced accuracy: {}, Loss: {}".format(batch_size, patience, bal_acc, loss_choice))
+                print("\n=====================================\n")    
+                # Call the plot function
+                plot_metrics(history, batch_size, patience, cm)
+
+                if bal_acc > best_bal_acc:
+                    best_bal_acc = bal_acc
+                    best_model = model
+                    best_batch_size = batch_size
+                    best_patience = patience
+                    loss_choice = loss_choice
+                    # save params to a txt file
+                    with open("best_params.txt", "a") as f:
+                        f.write("\nBest batch size: {}, Best patience: {}, Best balanced accuracy: {}, Best loss: {}".format(best_batch_size, best_patience, best_bal_acc, loss_choice))
+                    # save to output.npy x_test_final and y_pred_classes
+                    print("=====================================\n")
+                    print("saving to output.npy")
+                    print("\n=====================================\n")
+                    y_pred = best_model.predict(x_test_final)
+                    y_pred_classes = np.argmax(y_pred, axis=1)
+                    np.save("output.npy", y_pred_classes)
     print("=====================================\n")
     print("=====================================\n")
     print("=====================================\n")
-    print("Best batch size: {}, Best patience: {}, Best balanced accuracy: {}".format(best_batch_size, best_patience, best_bal_acc))
+    print("Best batch size: {}, Best patience: {}, Best balanced accuracy: {}, Best loss: {}".format(best_batch_size, best_patience, best_bal_acc, loss_choice))
     print("\n=====================================\n")
     print("=====================================\n")
     print("=====================================\n")     

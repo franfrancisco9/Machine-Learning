@@ -1,0 +1,3 @@
+Best batch size: 32, Best patience: 20, Best balanced accuracy: 0.7458652905343559, Best loss: 1
+Best batch size: 32, Best patience: 5, Best balanced accuracy: 0.7091500173594671, Best loss: 0
+Best batch size: 32, Best patience: 10, Best balanced accuracy: 0.747885301265663, Best loss: 0
