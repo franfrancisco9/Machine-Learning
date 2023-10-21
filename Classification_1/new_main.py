@@ -169,7 +169,8 @@ model.add(Dense(2, activation = 'softmax'))
 # Check if the model is working
 model.summary()
 
-# --------------------------- 2 - Configure the Network ---------------------- #
+# -------------------------
+# -- 2 - Configure the Network ---------------------- #
 
 # Fit MLP model
 model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
