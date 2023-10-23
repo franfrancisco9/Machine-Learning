@@ -23,6 +23,26 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import KFold
 
+
+# Metrics functions
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+def bal_acc(y_pred, y_true):
+    recall = recall_m(y_pred, y_true)
+    precision = precision_m(y_pred, y_true)
+    return 0.5 * (recall + precision)
+
 x_train = np.load("Xtrain_Classification2.npy")
 y_train = np.load("ytrain_Classification2.npy")
 x_test = np.load("Xtest_Classification2.npy")
@@ -59,12 +79,67 @@ print("Percentage of Granulocytes in the blood cell mycroscopy training set:", c
 print("Percentage of Basophils in the blood cell mycroscopy training set:", counts[4] / (counts[3] + counts[4] + counts[5]) * 100)
 print("Percentage of Lymphocytes in the blood cell mycroscopy training set:", counts[5] / (counts[3] + counts[4] + counts[5]) * 100)
 
+# ==== KNN ====
+# ==== Bayes ====
+# ==== SVM ====
+# ==== MLP ====
+# normalize the data
+x_train_mlp = x_train.astype('float32')
+x_train_mlp /= 255.0
 
-# KNN test
+
+# convert class vectors to binary class matrices
+y_train_mlp = keras.utils.to_categorical(y_train, 6)
+
+# split the training set into training and validation sets
+# the validation set will be used to evaluate the model
+
+x_train_mlp, x_val_mlp, y_train, y_val_mlp = train_test_split(x_train_mlp, y_train_mlp, test_size=0.2, random_state=95789)
+# define the model
+model = Sequential()
+model.add(InputLayer(input_shape=(28, 28, 3)))
+model.add(Flatten())
+model.add(Dense(224, activation='relu'))
+model.add(Dense(6, activation='softmax'))
+
+# print the model summary
+model.summary()
+
+es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=5)
+
+# compile the model
+model.compile(loss='categorical_crossentropy',
+                optimizer=RMSprop(),
+                metrics=[bal_acc],
+                callbacks=[es])
+
+# train the model
+history = model.fit(x_train_mlp, y_train_mlp,
+                    batch_size=128,
+                    epochs=50,
+                    verbose=1,
+                    validation_split=0.2,
+                    callbacks=[es])
+
+# evaluate the model on the validation set
+score = model.evaluate(x_val_mlp, y_val_mlp, verbose=0)
+print('Validation loss:', score[0])
+print('Validation balanced accuracy:', score[1])
+
+# plot the training and validation loss
+plt.plot(history.history['loss'], label='Training loss')
+plt.plot(history.history['val_loss'], label='Validation loss')
+plt.legend()
+plt.savefig('loss_mlp.png')
+# plot the training and validation balanced accuracy
+plt.plot(history.history['bal_acc'], label='Training balanced accuracy')
+plt.plot(history.history['val_bal_acc'], label='Validation balanced accuracy')
+plt.legend()
+plt.savefig('balanced_accuracy_mlp.png')
 
 
 
-
+# ==== CNN ====
 # reshape the data to be fed to the neural network
 # the first dimension is the number of images
 # the second and third dimensions are the dimensions of each image
@@ -94,34 +169,16 @@ print("Validation size", x_val.shape)
 # define the model
 model = Sequential()
 model.add(InputLayer(input_shape=(28, 28, 3)))
-model.add(Conv2D(80, kernel_size=(7, 7), activation='relu'))
-model.add(Conv2D(48, kernel_size=(7, 7), activation='relu'))
+model.add(Conv2D(80, kernel_size=(7, 7), activation='relu')) # 32 3
+model.add(Conv2D(48, kernel_size=(7, 7), activation='relu')) # 64 5
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
-model.add(Dense(224, activation='relu'))
+model.add(Dense(224, activation='relu')) # 128
 # model.add(Dropout(0.5))
 model.add(Dense(6, activation='softmax'))
 
 # print the model summary
 model.summary()
-
-def recall_m(y_true, y_pred):
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-    recall = true_positives / (possible_positives + K.epsilon())
-    return recall
-
-
-def precision_m(y_true, y_pred):
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-    precision = true_positives / (predicted_positives + K.epsilon())
-    return precision
-
-def bal_acc(y_pred, y_true):
-    recall = recall_m(y_pred, y_true)
-    precision = precision_m(y_pred, y_true)
-    return 0.5 * (recall + precision)
 # compile the model
 model.compile(loss='categorical_crossentropy',
               optimizer=RMSprop(),
@@ -147,13 +204,12 @@ print('Validation balanced accuracy:', score[1])
 plt.plot(history.history['loss'], label='Training loss')
 plt.plot(history.history['val_loss'], label='Validation loss')
 plt.legend()
-plt.show()
-
+plt.savefig('loss_cnn.png')
 # plot the training and validation balanced accuracy
 plt.plot(history.history['bal_acc'], label='Training balanced accuracy')
 plt.plot(history.history['val_bal_acc'], label='Validation balanced accuracy')
 plt.legend()
-plt.show()
+plt.savefig('balanced_accuracy_cnn.png')
 
 # predict the labels of the test set
 y_pred = model.predict(x_test)
