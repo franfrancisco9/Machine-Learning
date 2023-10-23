@@ -111,7 +111,7 @@ model.add(Dense(6, activation='softmax'))
 # print the model summary
 model.summary()
 
-es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=5)
+es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=20)
 
 # compile the model
 model.compile(loss='categorical_crossentropy',
@@ -132,11 +132,13 @@ print('Validation loss:', score[0])
 print('Validation balanced accuracy:', score[1])
 
 # plot the training and validation loss
+plt.figure()
 plt.plot(history.history['loss'], label='Training loss')
 plt.plot(history.history['val_loss'], label='Validation loss')
 plt.legend()
 plt.savefig('loss_mlp.png')
 # plot the training and validation balanced accuracy
+plt.figure(2)
 plt.plot(history.history['bal_acc'], label='Training balanced accuracy')
 plt.plot(history.history['val_bal_acc'], label='Validation balanced accuracy')
 plt.legend()
@@ -150,14 +152,15 @@ x_train_svm, x_val_svm, y_train_svm, y_val_svm = train_test_split(x_train_svm, y
 # setup the SVM classifier
 clf = SVC(kernel='linear', C=1, random_state=95789)
 
+# get y_train non one hot encoded for svm
+y_train_svm = np.argmax(y_train_svm, axis=1)
 # train the SVM classifier
-clf.fit(x_train_svm, y_train)
+clf.fit(x_train_svm, y_train_svm)
 
 # predict the labels of the validation set
 y_pred = clf.predict(x_val_svm)
 
-# print the BAC
-print("Balanced Accuracy Score: ", balanced_accuracy_score(y_val_svm, y_pred))
+# check how good svm is
 
 
 # ==== CNN ====
@@ -179,8 +182,8 @@ print("Validation size", x_val.shape)
 # define the model
 model = Sequential()
 model.add(InputLayer(input_shape=(28, 28, 3)))
-model.add(Conv2D(32, kernel_size=(3, 3), activation='relu')) # 32 3
-model.add(Conv2D(64, kernel_size=(5, 5), activation='relu')) # 64 5
+model.add(Conv2D(64, kernel_size=3, activation='relu'))
+model.add(Conv2D(32, kernel_size=3, activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 model.add(Dense(128, activation='relu')) # 128
@@ -195,7 +198,7 @@ model.compile(loss='categorical_crossentropy',
               metrics=[bal_acc])
 
 # early stopping
-es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=5)
+es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=10)
 
 # train the model
 history = model.fit(x_train, y_train,
@@ -210,12 +213,14 @@ score = model.evaluate(x_val, y_val, verbose=0)
 print('Validation loss:', score[0])
 print('Validation balanced accuracy:', score[1])
 
-# plot the training and validation loss
+# plot the training and validation loss in another figure
+plt.figure(3)
 plt.plot(history.history['loss'], label='Training loss')
 plt.plot(history.history['val_loss'], label='Validation loss')
 plt.legend()
 plt.savefig('loss_cnn.png')
 # plot the training and validation balanced accuracy
+plt.figure(4)
 plt.plot(history.history['bal_acc'], label='Training balanced accuracy')
 plt.plot(history.history['val_bal_acc'], label='Validation balanced accuracy')
 plt.legend()
