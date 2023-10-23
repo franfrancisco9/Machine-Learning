@@ -22,6 +22,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import KFold
+from sklearn.svm import SVC
 
 
 # Metrics functions
@@ -81,20 +82,25 @@ print("Percentage of Lymphocytes in the blood cell mycroscopy training set:", co
 
 # ==== KNN ====
 # ==== Bayes ====
-# ==== SVM ====
 # ==== MLP ====
+print("==== MLP ====")
 # normalize the data
-x_train_mlp = x_train.astype('float32')
-x_train_mlp /= 255.0
+x_train = x_train.reshape(x_train.shape[0], 28, 28, 3)
+x_test = x_test.reshape(x_test.shape[0], 28, 28, 3)
 
+# normalize the data
+x_train = x_train.astype('float32')
+x_test = x_test.astype('float32')
+x_train /= 255.0
+x_test /= 255.0
 
 # convert class vectors to binary class matrices
-y_train_mlp = keras.utils.to_categorical(y_train, 6)
+y_train = keras.utils.to_categorical(y_train, 6)
 
 # split the training set into training and validation sets
 # the validation set will be used to evaluate the model
 
-x_train_mlp, x_val_mlp, y_train, y_val_mlp = train_test_split(x_train_mlp, y_train_mlp, test_size=0.2, random_state=95789)
+x_train_mlp, x_val_mlp, y_train_mlp, y_val_mlp = train_test_split(x_train, y_train, test_size=0.2, random_state=95789)
 # define the model
 model = Sequential()
 model.add(InputLayer(input_shape=(28, 28, 3)))
@@ -110,8 +116,7 @@ es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=5)
 # compile the model
 model.compile(loss='categorical_crossentropy',
                 optimizer=RMSprop(),
-                metrics=[bal_acc],
-                callbacks=[es])
+                metrics=[bal_acc])
 
 # train the model
 history = model.fit(x_train_mlp, y_train_mlp,
@@ -137,25 +142,30 @@ plt.plot(history.history['val_bal_acc'], label='Validation balanced accuracy')
 plt.legend()
 plt.savefig('balanced_accuracy_mlp.png')
 
+# ==== SVM ====
+print("==== SVM ====")
+x_train_svm = x_train.reshape(x_train.shape[0], 28 * 28 * 3)
+
+x_train_svm, x_val_svm, y_train_svm, y_val_svm = train_test_split(x_train_svm, y_train, test_size=0.2, random_state=95789)
+# setup the SVM classifier
+clf = SVC(kernel='linear', C=1, random_state=95789)
+
+# train the SVM classifier
+clf.fit(x_train_svm, y_train)
+
+# predict the labels of the validation set
+y_pred = clf.predict(x_val_svm)
+
+# print the BAC
+print("Balanced Accuracy Score: ", balanced_accuracy_score(y_val_svm, y_pred))
 
 
 # ==== CNN ====
+print("==== CNN ====")
 # reshape the data to be fed to the neural network
 # the first dimension is the number of images
 # the second and third dimensions are the dimensions of each image
 # the fourth dimension is the number of channels (3 for RGB)
-x_train = x_train.reshape(x_train.shape[0], 28, 28, 3)
-x_test = x_test.reshape(x_test.shape[0], 28, 28, 3)
-
-# normalize the data
-x_train = x_train.astype('float32')
-x_test = x_test.astype('float32')
-x_train /= 255.0
-x_test /= 255.0
-
-# convert class vectors to binary class matrices
-y_train = keras.utils.to_categorical(y_train, 6)
-
 # split the training set into training and validation sets
 # the validation set will be used to evaluate the model
 
@@ -169,12 +179,12 @@ print("Validation size", x_val.shape)
 # define the model
 model = Sequential()
 model.add(InputLayer(input_shape=(28, 28, 3)))
-model.add(Conv2D(80, kernel_size=(7, 7), activation='relu')) # 32 3
-model.add(Conv2D(48, kernel_size=(7, 7), activation='relu')) # 64 5
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu')) # 32 3
+model.add(Conv2D(64, kernel_size=(5, 5), activation='relu')) # 64 5
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
-model.add(Dense(224, activation='relu')) # 128
-# model.add(Dropout(0.5))
+model.add(Dense(128, activation='relu')) # 128
+model.add(Dropout(0.2))
 model.add(Dense(6, activation='softmax'))
 
 # print the model summary
