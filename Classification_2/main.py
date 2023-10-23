@@ -60,6 +60,11 @@ print("Percentage of Basophils in the blood cell mycroscopy training set:", coun
 print("Percentage of Lymphocytes in the blood cell mycroscopy training set:", counts[5] / (counts[3] + counts[4] + counts[5]) * 100)
 
 
+# KNN test
+
+
+
+
 # reshape the data to be fed to the neural network
 # the first dimension is the number of images
 # the second and third dimensions are the dimensions of each image
@@ -89,11 +94,11 @@ print("Validation size", x_val.shape)
 # define the model
 model = Sequential()
 model.add(InputLayer(input_shape=(28, 28, 3)))
-model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
-model.add(Conv2D(64, kernel_size=(5, 5), activation='relu'))
+model.add(Conv2D(80, kernel_size=(7, 7), activation='relu'))
+model.add(Conv2D(48, kernel_size=(7, 7), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
-model.add(Dense(64, activation='relu'))
+model.add(Dense(224, activation='relu'))
 # model.add(Dropout(0.5))
 model.add(Dense(6, activation='softmax'))
 
@@ -122,12 +127,16 @@ model.compile(loss='categorical_crossentropy',
               optimizer=RMSprop(),
               metrics=[bal_acc])
 
+# early stopping
+es = EarlyStopping(monitor='val_bal_acc', mode='max', verbose=1, patience=5)
+
 # train the model
 history = model.fit(x_train, y_train,
                     batch_size=128,
-                    epochs=20,
+                    epochs=50,
                     verbose=1,
-                    validation_data=(x_val, y_val))
+                    validation_data=(x_val, y_val),
+                    callbacks=[es])
 
 # evaluate the model on the validation set
 score = model.evaluate(x_val, y_val, verbose=0)
