@@ -81,7 +81,57 @@ print("Percentage of Basophils in the blood cell mycroscopy training set:", coun
 print("Percentage of Lymphocytes in the blood cell mycroscopy training set:", counts[5] / (counts[3] + counts[4] + counts[5]) * 100)
 
 # ==== KNN ====
+print("==== kNN ====")
+from sklearn.neighbors import KNeighborsClassifier
+print("KNN Classifier with 3 neighbors")
+
+# split the training set into training and validation sets
+# the validation set will be used to evaluate the model
+
+#x_train = x_train.reshape(x_train.shape[0], -1)
+x_train = x_train.reshape(x_train.shape[0], 28*28*3)
+
+# Split the data into training and validation sets
+x_train_knn, x_val_knn, y_train_knn, y_val_knn = train_test_split(x_train, y_train, test_size=0.2, random_state=95789)
+
+# Create and fit the KNN classifier
+clf = KNeighborsClassifier(n_neighbors=3)
+clf.fit(x_train_knn, y_train_knn)
+
+# Predict and evaluate
+y_preds_knn = clf.predict(x_val_knn)
+print("Balanced Accuracy Score: ", bal_acc(y_val_knn, y_preds_knn))
+np.save('output_knn.npy', y_preds_knn)
+
+
 # ==== Bayes ====
+
+print("==== Naive Bayes ====")
+
+from sklearn.naive_bayes import GaussianNB
+x_train = x_train.reshape(x_train.shape[0], 28*28*3)
+x_train_bys, x_val_bys, y_train_bys, y_val_bys = train_test_split(x_train, y_train, test_size=0.2, random_state=95789)
+
+
+# Create a Gaussian Classifier
+gnb = GaussianNB()
+
+# Train the model using the training sets
+gnb.fit(x_train_bys, y_train_bys)
+
+# Predict the response for test dataset
+y_pred_bys = gnb.predict(x_val_bys)
+
+# ============================== Evaluation =========================== #
+
+# Classification report
+print(classification_report(y_val_bys, y_pred_bys))
+
+# Balanced Accuracy
+print('Balanced Accuracy:', bal_acc(y_val_bys, y_pred_bys))
+
+
+
 # ==== MLP ====
 print("==== MLP ====")
 # normalize the data
